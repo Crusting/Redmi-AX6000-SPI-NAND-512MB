@@ -166,34 +166,11 @@ jobs:
       run: | 
         cd openwrt/bin/targets/*/*
         rm -rf packages
-        sudo -E apt-get -qq install rename perl
-    
-        # 调试输出变量
-        echo "TARGET_NAME=${{ env.TARGET_NAME }}"
-        echo "OPENWRT_NAME=${{ env.OPENWRT_NAME }}"
-        echo "FILE_DATE=${{ env.FILE_DATE }}"
-    
-        # 分步重命名（带预演）
-        rename -n --verbose 's/^(.*?)\Q${{ env.TARGET_NAME }}\E(.*)$/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}$2/' *
-        rename -f --verbose 's/^(.*?)\Q${{ env.TARGET_NAME }}\E(.*)$/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}$2/' *
-    
-        # 二次替换
-        rename -v 's/\bax6000\b/ax6000-spi_nand-512m/' *
-    
-        FIRMWARE=$PWD" >> $GITHUB_ENV
+        sudo -E apt-get -qq install rename
+        rename 's/.*${{ env.TARGET_NAME }}/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}/' *
+        rename 's/ax6000/ax6000-spi_nand-512m/' *
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
-    
-   # - name: 整理文件并重命名
-   #   id: organize
-   #   if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
-   #   run: | 
-   #     cd openwrt/bin/targets/*/*
-   #     rm -rf packages
-   #     sudo -E apt-get -qq install rename
-   #     rename 's/.*${{ env.TARGET_NAME }}/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}/' *
-   #     rename 's/ax6000/ax6000-spi_nand-512m/' *
-   #     echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-   #     echo "status=success" >> $GITHUB_OUTPUT
       
     - name: 上传固件到Actions Artifacts
       uses: actions/upload-artifact@main
