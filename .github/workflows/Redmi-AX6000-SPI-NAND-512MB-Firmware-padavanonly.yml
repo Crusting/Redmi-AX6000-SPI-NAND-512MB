@@ -87,18 +87,31 @@ jobs:
         
         # all of these default to true, but feel free to set to
         # "false" if necessary for your workflow
-        android: false
-        dotnet: false
-        haskell: false
-        large-packages: false
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
         swap-storage: false
         
+    - name: Free disk space
+      run: curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash 
+      
     - name: 下载固件源码
       working-directory: /workdir
       run: |
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        
+    - name: 清理编译残留文件
+      run: |
+        cd openwrt
+        git clean -xdf
+        git reset --hard
+        make dirclean 2>/dev/null || make clean
+        rm -rf ./tmp/
+        ccache -C
+        ccache -s  # 显示缓存统计
         
     - name: 加载feeds.conf.default & DIY_P1_SH
       run: |
