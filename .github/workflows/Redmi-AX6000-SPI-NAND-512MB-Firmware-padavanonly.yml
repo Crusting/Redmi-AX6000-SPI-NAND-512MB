@@ -102,17 +102,7 @@ jobs:
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
-        
-    - name: 清理编译残留文件
-      run: |
-        cd openwrt
-        git clean -xdf
-        git reset --hard
-        make dirclean 2>/dev/null || make clean
-        rm -rf ./tmp/
-        ccache -C
-        ccache -s  # 显示缓存统计
-        
+                
     - name: 加载feeds.conf.default & DIY_P1_SH
       run: |
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
