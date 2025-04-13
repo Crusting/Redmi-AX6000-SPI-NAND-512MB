@@ -38,22 +38,40 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
-
+    # runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     
     steps:
     - name: 检查项目分支
-      uses: actions/checkout@main
+      #uses: actions/checkout@main
+      uses: actions/checkout@v4  
       
     - name: 初始化编译环境
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        # sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo rm -rf /etc/apt/sources.list.d/*.list
         sudo -E apt-get -qq update
-        sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-2004)
+        # sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-2004)
+        sudo -E apt-get -qq install \
+          build-essential \
+          libncurses-dev \
+          libssl-dev \
+          zlib1g-dev \
+          git \
+          ccache \
+          bison \
+          flex \
+          cmake \
+          ninja-build \
+          clang \
+          python3 \
+          pkg-config \
+          gdb-multiarch \
+          aria2
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
         sudo timedatectl set-timezone "$TZ"
@@ -117,7 +135,7 @@ jobs:
       id: package
       run: |
         cd openwrt
-        # make defconfig
+        make defconfig
         make download -j$(nproc)
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
@@ -145,11 +163,34 @@ jobs:
       run: | 
         cd openwrt/bin/targets/*/*
         rm -rf packages
-        sudo -E apt-get -qq install rename
-        rename 's/.*${{ env.TARGET_NAME }}/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}/' *
-        rename 's/ax6000/ax6000-spi_nand-512m/' *
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        sudo -E apt-get -qq install rename perl
+    
+        # 调试输出变量
+        echo "TARGET_NAME=${{ env.TARGET_NAME }}"
+        echo "OPENWRT_NAME=${{ env.OPENWRT_NAME }}"
+        echo "FILE_DATE=${{ env.FILE_DATE }}"
+    
+        # 分步重命名（带预演）
+        rename -n --verbose 's/^(.*?)\Q${{ env.TARGET_NAME }}\E(.*)$/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}$2/' *
+        rename -f --verbose 's/^(.*?)\Q${{ env.TARGET_NAME }}\E(.*)$/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}$2/' *
+    
+        # 二次替换
+        rename -v 's/\bax6000\b/ax6000-spi_nand-512m/' *
+    
+        FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
+    
+   # - name: 整理文件并重命名
+   #   id: organize
+   #   if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+   #   run: | 
+   #     cd openwrt/bin/targets/*/*
+   #     rm -rf packages
+   #     sudo -E apt-get -qq install rename
+   #     rename 's/.*${{ env.TARGET_NAME }}/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}/' *
+   #     rename 's/ax6000/ax6000-spi_nand-512m/' *
+   #     echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+   #     echo "status=success" >> $GITHUB_OUTPUT
       
     - name: 上传固件到Actions Artifacts
       uses: actions/upload-artifact@main
